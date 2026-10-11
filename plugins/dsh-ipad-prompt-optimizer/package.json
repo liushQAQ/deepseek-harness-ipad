@@ -1,0 +1,6 @@
+{
+  "name": "dsh-ipad-prompt-optimizer",
+  "version": "1.0.0",
+  "description": "Pad Harness 纯本地结构化提示词调优引擎",
+  "main": "index.js"
+}

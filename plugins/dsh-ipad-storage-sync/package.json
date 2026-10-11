@@ -1,0 +1,7 @@
+{
+  "name": "dsh-ipad-storage-sync",
+  "version": "1.0.0",
+  "description": "Session auto-archiving and NAS sync plugin for iPad 256GB storage tiering",
+  "main": "index.js",
+  "license": "MIT"
+}

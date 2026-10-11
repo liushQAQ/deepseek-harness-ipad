@@ -1,0 +1,10 @@
+.DS_Store
+*.swp
+*.ipa
+*.tipa
+_dl_isolated/
+build/
+Payload/
+DerivedData/
+*.xcworkspace/xcuserdata
+*.xcodeproj/xcuserdata

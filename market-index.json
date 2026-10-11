@@ -1,0 +1,58 @@
+[
+  {
+    "id": "dsh-ipad-posix-exec",
+    "name": "真 POSIX 终端插件",
+    "version": "1.0.0",
+    "description": "基于 iPad Rootless /var/jb/bin/sh 的真终端与工具链执行引擎，完全替代 Windows 终端能力",
+    "author": "liush734530963"
+  },
+  {
+    "id": "dsh-ipad-memory-guard",
+    "name": "内存 GC 守护插件",
+    "version": "1.0.0",
+    "description": "实时监控内存并在闲置时主动调用 global.gc()，彻底防止 Jetsam 杀死后台",
+    "author": "liush734530963"
+  },
+  {
+    "id": "dsh-ipad-storage-sync",
+    "name": "闪存分层与 NAS 归档插件",
+    "version": "1.0.0",
+    "description": "14天活跃会话轮转，超期历史自动打包同步至 NAS/WebDAV，本地彻底清除释放 256G 闪存",
+    "author": "liush734530963"
+  },
+  {
+    "id": "dsh-ipad-cost-meter",
+    "name": "Token 计量与成本统计插件",
+    "version": "1.0.0",
+    "description": "轻量化 Token 与费用统计，支持 deepseek-chat 与 deepseek-reasoner",
+    "author": "liush734530963"
+  },
+  {
+    "id": "dsh-ipad-prompt-optimizer",
+    "name": "本地结构化提示词调优插件",
+    "version": "1.0.0",
+    "description": "纯本地规则化生成高质量提示词，零云端 Token 消耗",
+    "author": "liush734530963"
+  },
+  {
+    "id": "dsh-ipad-mnemon-lite",
+    "name": "轻量记忆图谱插件",
+    "version": "1.0.0",
+    "description": "磁盘 SQLite / JSON 优先记忆存储与检索，对标 dsh-mnemon 原版能力",
+    "author": "liush734530963"
+  },
+  {
+    "id": "dsh-ipad-modlens-lite",
+    "name": "轻量多模态转接插件",
+    "version": "1.0.0",
+    "description": "iPad 原生截图与图片多模态流式解析器，对标 modlens 原版能力",
+    "author": "liush734530963"
+  },
+  {
+    "id": "dsh-ipad-market",
+    "name": "内置轻量插件市场",
+    "version": "1.0.0",
+    "description": "直连 GitHub 官方仓库索引，支持动态加载与社区新插件热更新",
+    "author": "liush734530963"
+  }
+]

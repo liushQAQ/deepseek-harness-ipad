@@ -1,0 +1,7 @@
+{
+  "name": "dsh-ipad-market",
+  "version": "1.0.0",
+  "description": "Pad Harness Built-in Lightweight Plugin Market connected to custom GitHub registry",
+  "main": "index.js",
+  "license": "MIT"
+}

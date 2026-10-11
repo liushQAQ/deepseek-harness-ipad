@@ -1,0 +1,142 @@
+name: Build unsigned IPA (Personal & Public)
+
+on:
+  workflow_dispatch:
+  # 关闭自动 push 触发，彻底杜绝短时间内并发高频挤占 macOS 免费算力导致账号风控
+  # push:
+  #   branches: [ main, master, personal ]
+
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_15.4.app
+
+      - name: Resolve version
+        id: ver
+        run: |
+          set -euo pipefail
+          MARKETING="$(tr -d '[:space:]' < VERSION)"
+          [ -n "$MARKETING" ] || { echo "VERSION file is empty"; exit 1; }
+          BUILD="${{ github.run_number }}"
+          echo "marketing=$MARKETING" >> "$GITHUB_OUTPUT"
+          echo "build=$BUILD" >> "$GITHUB_OUTPUT"
+          echo "Version: $MARKETING ($BUILD)"
+
+      # ==========================================
+      # 1. 编译打包：个人版（包含完整内网/外网穿透配置与凭据，放行 iPhone/iPad 双端）
+      # ==========================================
+      - name: Build Personal Edition (Archive)
+        run: |
+          rm -rf build Payload
+          xcodebuild archive \
+            -project PadHarness.xcodeproj \
+            -scheme PadHarness \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath build/PadHarness-personal.xcarchive \
+            MARKETING_VERSION="${{ steps.ver.outputs.marketing }}" \
+            CURRENT_PROJECT_VERSION="${{ steps.ver.outputs.build }}" \
+            TARGETED_DEVICE_FAMILY="1,2" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            DEVELOPMENT_TEAM="" \
+            AD_HOC_CODE_SIGNING_ALLOWED=NO
+
+      - name: Package Personal IPA
+        run: |
+          APP="build/PadHarness-personal.xcarchive/Products/Applications/PadHarness.app"
+          test -d "$APP" || { echo "missing $APP"; exit 1; }
+          mkdir -p Payload
+          cp -R "$APP" Payload/PadHarness.app
+          mkdir -p Payload/PadHarness.app/dsh-engine
+          cp -R core plugins daemon server market-index.json Payload/PadHarness.app/dsh-engine/
+          rm -rf Payload/PadHarness.app/_CodeSignature 2>/dev/null || true
+          rm -f  Payload/PadHarness.app/embedded.mobileprovision 2>/dev/null || true
+          zip -qry PadHarness-personal-unsigned.ipa Payload
+          cp PadHarness-personal-unsigned.ipa "PadHarness-personal-${{ steps.ver.outputs.marketing }}-${{ steps.ver.outputs.build }}.ipa"
+          cp PadHarness-personal-unsigned.ipa "PadHarness-personal-${{ steps.ver.outputs.marketing }}-${{ steps.ver.outputs.build }}.tipa"
+          cp PadHarness-personal-unsigned.ipa PadHarness-personal-unsigned.tipa
+          ls -lh PadHarness-personal-*.ipa PadHarness-personal-*.tipa
+
+      # ==========================================
+      # 2. 编译打包：公开发行版（纯净版，剔除外网地址与密钥，开放 iPhone/iPad 全设备兼容）
+      # ==========================================
+      - name: Build Public Edition (Archive)
+        run: |
+          rm -rf build Payload
+          # 公开版同样解除 iPhone 限制，支持 UIDeviceFamily = 1, 2 (iPhone & iPad)
+          /usr/libexec/PlistBuddy -c "Delete :UIDeviceFamily" PadHarness/Info.plist 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Add :UIDeviceFamily array" PadHarness/Info.plist
+          /usr/libexec/PlistBuddy -c "Add :UIDeviceFamily:0 integer 1" PadHarness/Info.plist
+          /usr/libexec/PlistBuddy -c "Add :UIDeviceFamily:1 integer 2" PadHarness/Info.plist
+          xcodebuild archive \
+            -project PadHarness.xcodeproj \
+            -scheme PadHarness \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath build/PadHarness-public.xcarchive \
+            MARKETING_VERSION="${{ steps.ver.outputs.marketing }}" \
+            CURRENT_PROJECT_VERSION="${{ steps.ver.outputs.build }}" \
+            TARGETED_DEVICE_FAMILY="1,2" \
+            SWIFT_ACTIVE_COMPILATION_CONDITIONS="PUBLIC_BUILD" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            DEVELOPMENT_TEAM="" \
+            AD_HOC_CODE_SIGNING_ALLOWED=NO
+
+      - name: Package Public IPA
+        run: |
+          APP="build/PadHarness-public.xcarchive/Products/Applications/PadHarness.app"
+          test -d "$APP" || { echo "missing $APP"; exit 1; }
+          mkdir -p Payload
+          cp -R "$APP" Payload/PadHarness.app
+          mkdir -p Payload/PadHarness.app/dsh-engine
+          cp -R core plugins daemon server market-index.json Payload/PadHarness.app/dsh-engine/
+          # 公开版安全基线：确保纯净无凭据
+          rm -rf Payload/PadHarness.app/_CodeSignature 2>/dev/null || true
+          rm -f  Payload/PadHarness.app/embedded.mobileprovision 2>/dev/null || true
+          zip -qry PadHarness-public-unsigned.ipa Payload
+          cp PadHarness-public-unsigned.ipa "PadHarness-public-${{ steps.ver.outputs.marketing }}-${{ steps.ver.outputs.build }}.ipa"
+          cp PadHarness-public-unsigned.ipa "PadHarness-public-${{ steps.ver.outputs.marketing }}-${{ steps.ver.outputs.build }}.tipa"
+          cp PadHarness-public-unsigned.ipa PadHarness-public-unsigned.tipa
+          ls -lh PadHarness-public-*.ipa PadHarness-public-*.tipa
+
+      # 默认通用名称（兼容以往老脚本取名习惯，默认使用个人版）
+      - name: Prepare default alias
+        run: |
+          cp PadHarness-personal-unsigned.ipa PadHarness-unsigned.ipa
+          cp PadHarness-personal-unsigned.ipa PadHarness-unsigned.tipa
+
+      - name: Upload Personal IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PadHarness-personal
+          path: |
+            PadHarness-personal-unsigned.ipa
+            PadHarness-personal-unsigned.tipa
+          if-no-files-found: error
+
+      - name: Upload Public IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PadHarness-public
+          path: |
+            PadHarness-public-unsigned.ipa
+            PadHarness-public-unsigned.tipa
+          if-no-files-found: error
+
+      - name: Upload Standard IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PadHarness-default
+          path: |
+            PadHarness-unsigned.ipa
+            PadHarness-unsigned.tipa
+          if-no-files-found: error

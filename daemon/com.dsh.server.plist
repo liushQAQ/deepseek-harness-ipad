@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.dsh.server</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/var/jb/usr/bin/node</string>
+        <string>--expose-gc</string>
+        <string>--max-old-space-size=1024</string>
+        <string>/var/jb/var/dsh/core/index.js</string>
+    </array>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>HOST</key>
+        <string>0.0.0.0</string>
+        <key>PORT</key>
+        <string>3080</string>
+        <key>PATH</key>
+        <string>/var/jb/bin:/var/jb/usr/bin:/bin:/usr/bin</string>
+    </dict>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>/var/jb/var/log/dsh-server.log</string>
+    <key>StandardErrorPath</key>
+    <string>/var/jb/var/log/dsh-server-error.log</string>
+</dict>
+</plist>

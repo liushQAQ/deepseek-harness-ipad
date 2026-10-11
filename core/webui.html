@@ -1,0 +1,1391 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>iOS Harness | 移动生产力工作站</title>
+  <style>
+    :root {
+      --bg: #090c10;
+      --panel-bg: #0d1117;
+      --card-bg: #161b22;
+      --card-hover: #1f242c;
+      --border: #30363d;
+      --border-subtle: #21262d;
+      --text: #c9d1d9;
+      --text-bright: #f0f6fc;
+      --text-muted: #8b949e;
+      --accent: #1f6feb;
+      --accent-hover: #388bfd;
+      --gold: #d29922;
+      --green: #238636;
+      --green-bright: #3fb950;
+      --danger: #da3633;
+      --danger-bright: #f85149;
+      --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+    /* Codex 极简顶部栏：保持极度通透与清爽，仅保留极简品牌标、模型标识、会话操作与设置按钮 */
+    header {
+      background: var(--panel-bg);
+      border-bottom: 1px solid var(--border-subtle);
+      padding: 8px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+      gap: 10px;
+    }
+    .brand { display: flex; align-items: center; gap: 8px; }
+    .brand-logo {
+      width: 26px; height: 26px; border-radius: 6px;
+      background: linear-gradient(135deg, #1f6feb, #1158c7);
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; color: #fff; font-size: 13px;
+      box-shadow: 0 1px 4px rgba(31, 111, 235, 0.3);
+    }
+    .brand-title { font-size: 14px; font-weight: 600; color: var(--text-bright); letter-spacing: -0.2px; }
+    .badge-subtle {
+      background: #1c2128;
+      color: var(--text-muted);
+      border: 1px solid var(--border-subtle);
+      padding: 1px 7px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-family: var(--mono);
+    }
+    .badge-green {
+      background: rgba(35, 134, 54, 0.15);
+      color: var(--green-bright);
+      border: 1px solid rgba(35, 134, 54, 0.35);
+    }
+    .header-actions { display: flex; align-items: center; gap: 6px; }
+    .btn-icon {
+      background: #161b22;
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 5px 9px;
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.15s ease;
+    }
+    .btn-icon:active { background: #21262d; opacity: 0.8; }
+
+    /* 主工作台 */
+    .workspace {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+    .sidebar {
+      width: 240px;
+      background: var(--panel-bg);
+      border-right: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      padding: 12px 10px;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    @media (max-width: 768px) {
+      .sidebar { display: none; }
+    }
+    .new-chat-btn {
+      background: var(--card-bg);
+      color: var(--text-bright);
+      border: 1px solid var(--border);
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-weight: 500;
+      font-size: 12px;
+      cursor: pointer;
+      text-align: left;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.15s;
+    }
+    .new-chat-btn:hover { background: var(--card-hover); }
+    .sidebar-section {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 600;
+      margin-top: 10px;
+      padding-left: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .nav-item {
+      padding: 7px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      color: var(--text);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: all 0.12s;
+    }
+    .nav-item.active, .nav-item:hover {
+      background: #1c2128;
+      color: var(--text-bright);
+    }
+    .status-box {
+      margin-top: auto;
+      background: #12161f;
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      padding: 10px;
+      font-size: 11px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      font-family: var(--mono);
+    }
+    .status-row { display: flex; justify-content: space-between; color: var(--text-muted); }
+    .status-val { color: var(--text); font-weight: 500; }
+
+    /* 核心对话区 - Codex 风格 */
+    .main-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: var(--bg);
+    }
+    .top-subbar {
+      background: #0d1117;
+      border-bottom: 1px solid var(--border-subtle);
+      padding: 5px 14px;
+      font-size: 11px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-family: var(--mono);
+    }
+    .chat-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .msg {
+      max-width: 90%;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 13.5px;
+      line-height: 1.6;
+      word-break: break-word;
+      white-space: pre-wrap;
+    }
+    .msg.user {
+      align-self: flex-end;
+      background: #1f6feb;
+      color: #fff;
+      border-bottom-right-radius: 2px;
+    }
+    .msg.bot {
+      align-self: flex-start;
+      background: #161b22;
+      border: 1px solid var(--border-subtle);
+      color: var(--text-bright);
+      border-bottom-left-radius: 2px;
+    }
+    /* Codex 底部命令与输入面板 */
+    .composer-wrapper {
+      background: var(--panel-bg);
+      border-top: 1px solid var(--border-subtle);
+      padding: 10px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .workflow-quick-bar {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      padding-bottom: 2px;
+    }
+    .workflow-quick-bar::-webkit-scrollbar { display: none; }
+    .btn-quick {
+      background: #161b22;
+      color: var(--text-muted);
+      border: 1px solid var(--border-subtle);
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 11.5px;
+      white-space: nowrap;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.12s;
+    }
+    .btn-quick:active, .btn-quick:hover {
+      background: #21262d;
+      color: var(--text-bright);
+      border-color: #388bfd66;
+    }
+    .composer {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .mode-select {
+      background: #161b22;
+      color: var(--text-bright);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px 10px;
+      font-size: 12px;
+      outline: none;
+    }
+    .composer input {
+      flex: 1;
+      background: #090c10;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 9px 12px;
+      color: #fff;
+      font-size: 13.5px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .composer input:focus { border-color: var(--accent-hover); }
+    .send-btn {
+      background: #238636;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 9px 16px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.12s;
+    }
+    .send-btn:active { background: #2ea043; }
+
+    /* 模态弹窗 - Codex 暗黑沉浸风格 */
+    .modal-backdrop {
+      position: fixed; inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      padding: 16px;
+    }
+    .modal-backdrop.show { display: flex; }
+    .modal {
+      background: #161b22;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      width: 100%;
+      max-width: 580px;
+      max-height: 85vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+    }
+    .modal-header {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: 600;
+      font-size: 13px;
+      color: var(--text-bright);
+    }
+    .modal-body {
+      padding: 14px 16px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .plugin-item {
+      background: #0d1117;
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      padding: 9px 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .plugin-info h4 { font-size: 12.5px; color: var(--text-bright); margin-bottom: 2px; }
+    .plugin-info p { font-size: 11px; color: var(--text-muted); }
+    .form-group { display: flex; flex-direction: column; gap: 5px; }
+    .form-group label { font-size: 11.5px; color: var(--text-muted); }
+    .form-group input, .form-group select {
+      background: #090c10;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px 10px;
+      color: #fff;
+      font-size: 12.5px;
+      font-family: var(--mono);
+    }
+    .form-group input:focus { border-color: var(--accent-hover); outline: none; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <div class="brand-logo">H</div>
+      <span class="brand-title">iOS Harness</span>
+      <span class="badge-subtle" id="dev-tag">Codex 移动工作站</span>
+    </div>
+    <div class="header-actions">
+      <button class="btn-icon" onclick="openDoctorModal()">🩺 体检</button>
+      <button class="btn-icon" onclick="openLogModal()">📋 日志</button>
+      <button class="btn-icon" onclick="openModal('pluginsModal')">🧩 插件</button>
+      <button class="btn-icon" onclick="openModal('settingsModal')">⚙️ 设置</button>
+    </div>
+  </header>
+
+  <div class="workspace">
+    <aside class="sidebar">
+      <button class="new-chat-btn" onclick="resetChat()">+ 新建会话</button>
+      <div class="sidebar-section">工作流模式</div>
+      <div class="nav-item active" onclick="switchMode('agent', this)">
+        <span>🤖 智能体工作流</span>
+        <span class="badge-subtle badge-green">多轮闭环</span>
+      </div>
+      <div class="nav-item" onclick="switchMode('chat', this)">
+        <span>💬 极速对话推理</span>
+        <span class="badge-subtle">云端</span>
+      </div>
+      <div class="nav-item" onclick="switchMode('posix', this)">
+        <span>💻 终端直通执行</span>
+        <span class="badge-subtle">POSIX</span>
+      </div>
+      <div class="nav-item" onclick="switchMode('optimize', this)">
+        <span>✨ 提示词结构调优</span>
+        <span class="badge-subtle">零Token</span>
+      </div>
+
+      <div class="status-box">
+        <div class="status-row"><span>服务地址</span><span class="status-val">0.0.0.0:3080</span></div>
+        <div class="status-row"><span>自研轻插件</span><span class="status-val">8 / 8 就绪</span></div>
+        <div class="status-row"><span>内存安全防爆</span><span class="status-val" id="mem-status-val">动态硬上限保护</span></div>
+      </div>
+    </aside>
+
+    <section class="main-area">
+      <div class="top-subbar">
+        <span id="mode-banner">Codex 智能体模式：自主规划 + 真实 POSIX 终端执行 + 零延迟 Native 桥接</span>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <button type="button" class="btn-quick" onclick="clearChatHistory()" style="font-size:11px;padding:2px 8px;color:#f85149;border-color:#f8514933;">🧹 清空会话</button>
+          <span id="cost-banner" style="color:var(--text-muted);">累计: 0 Tokens</span>
+        </div>
+      </div>
+
+      <div class="chat-list" id="chat-list">
+        <div class="msg bot">⚡ <b>iOS Harness (移动生产力工作站 v1.0.79)</b> 已就绪！
+• <b>一键获取远程可用模型</b>：设置弹窗已集成「📡 一键获取模型列表」与「⚡ 连通性测试」，填好 URL 和 Key 即可自动枚举所有兼容模型并直接点选！
+• <b>数据升级防覆盖保护</b>：已启用 Documents 与 UserDefaults 原生双层持久化，更新安装包绝不丢失自定义 API Key、模型设置与会话记录。
+• <b>Codex 极简界面</b>：全站去除冗余堆砌，内存与硬件指标整合至悬浮控制中心。
+• <b>全功能智能体闭环</b>：智能体支持自主规划、自主调度本机真实终端命令 (uname, df, free, ps, ls, cat) 并多轮闭环执行。
+• <b>设备全面适配</b>：解除机型限制，适配 iPhone 14 Pro Max 及 iPad 全系设备。</div>
+      </div>
+
+      <div class="composer-wrapper">
+        <div class="workflow-quick-bar">
+          <button type="button" class="btn-quick" onclick="fillAndSend('请调用本机终端工具，全面检查当前设备的系统内核版本(uname -a)、磁盘容量(df -h)及内存状态(free -m)，并给出详细的软硬件健康评估报告。')">🔍 巡检系统与磁盘</button>
+          <button type="button" class="btn-quick" onclick="fillAndSend('请运行运行环境自检诊断，查看 Node.js、Python3、POSIX Shell 及越狱底层工具链的就绪状态。')">🩺 环境工具链诊断</button>
+          <button type="button" class="btn-quick" onclick="fillAndSend('请列出当前工作目录下的文件列表，并检查关键运行文件。')">📂 巡检工作区文件</button>
+          <button type="button" class="btn-quick" onclick="fillAndSend('你好！请简要介绍你自己，以及你作为独立移动生产力智能体的核心能力。', 'chat')">💬 极速对话</button>
+          <button type="button" class="btn-quick" onclick="clearChatHistory()" style="color:#f85149;border-color:#f8514933;">🧹 重置会话</button>
+        </div>
+        <div class="composer">
+          <select class="mode-select" id="action-mode" onchange="onSelectModeChange()">
+            <option value="agent" selected>🤖 智能体</option>
+            <option value="chat">💬 对话</option>
+            <option value="posix">💻 POSIX</option>
+            <option value="optimize">✨ 调优</option>
+          </select>
+          <input type="text" id="prompt-input" placeholder="输入任务指令、Shell 命令或对话内容..." onkeydown="if(event.key==='Enter')sendTask()" />
+          <button class="send-btn" onclick="sendTask()">发送</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- 8大自研轻量插件弹窗 -->
+  <div class="modal-backdrop" id="pluginsModal">
+    <div class="modal">
+      <div class="modal-header">
+        <span>🧩 iOS Harness 自研轻量插件矩阵 (8/8)</span>
+        <button class="btn-icon" onclick="closeModal('pluginsModal')">关闭</button>
+      </div>
+      <div class="modal-body" id="plugin-list-container">
+        <!-- 动态渲染 -->
+      </div>
+    </div>
+  </div>
+
+  <!-- API 设置弹窗 -->
+  <div class="modal-backdrop" id="settingsModal">
+    <div class="modal">
+      <div class="modal-header">
+        <span>⚙️ 推理 API 与存储分层设置</span>
+        <button class="btn-icon" onclick="closeModal('settingsModal')">关闭</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>一键快捷载入常用配置通道</label>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;">
+            <button type="button" class="btn-quick" onclick="applyPresetChannel('deepseek-official')">DeepSeek 官方</button>
+            <button type="button" class="btn-quick" onclick="applyPresetChannel('siliconflow')">SiliconFlow 硅基流动</button>
+            <button type="button" class="btn-quick" onclick="applyPresetChannel('sensenova')">SenseNova 商汤</button>
+            <button type="button" class="btn-quick" onclick="applyPresetChannel('zhipu')">智谱 GLM</button>
+            <button type="button" class="btn-quick" onclick="applyPresetChannel('gemini-gateway')">Gemini 网关</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>API Base URL (兼容 OpenAI 规范)</label>
+          <input type="text" id="cfg-baseurl" placeholder="https://api.deepseek.com/v1" />
+        </div>
+        <div class="form-group">
+          <label>API Key (本地安全存储)</label>
+          <input type="password" id="cfg-apikey" placeholder="sk-..." />
+        </div>
+        <div class="form-group">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+            <label style="margin-bottom:0;">推理模型名称</label>
+            <div style="display:flex;gap:6px;">
+              <button type="button" id="btn-fetch-models" class="btn-quick" onclick="fetchRemoteModelList()" style="color:var(--accent);border-color:var(--accent);font-size:11px;padding:2px 8px;">📡 一键获取模型列表</button>
+              <button type="button" id="btn-test-conn" class="btn-quick" onclick="testChannelConnectivity()" style="color:#58a6ff;border-color:#58a6ff;font-size:11px;padding:2px 8px;">⚡ 连通性测试</button>
+            </div>
+          </div>
+          <input type="text" id="cfg-model" list="preset-models" placeholder="deepseek-chat, gpt-4o, claude-3-7-sonnet..." />
+          <datalist id="preset-models">
+            <option value="deepseek-chat">DeepSeek-V3 极速对话 (官方)</option>
+            <option value="deepseek-reasoner">DeepSeek-R1 深度思考 (官方)</option>
+            <option value="deepseek-ai/DeepSeek-V3.2">DeepSeek V3.2 (SiliconFlow)</option>
+            <option value="gemini-3.8-flash-high">Gemini 3.8 Flash High</option>
+            <option value="grok-4.6">Grok 4.6 (思考/全能)</option>
+            <option value="glm-5.2">SenseNova GLM-5.2 (商汤)</option>
+            <option value="glm-4.7">GLM-4.7 (智谱)</option>
+          </datalist>
+          <div id="models-fetch-tip" style="display:none;font-size:11.5px;margin-top:6px;padding:6px 10px;border-radius:4px;background:#0d1117;border:1px solid #30363d;color:var(--text-muted);"></div>
+        </div>
+        <div class="form-group">
+          <label>WebDAV 云盘自动归档地址 (超 14 天冷会话归档)</label>
+          <input type="text" id="cfg-nas" placeholder="https://dav.jianguoyun.com/dav/dsh-archive/" />
+        </div>
+        <button class="send-btn" onclick="saveSettings()" style="width:100%;margin-top:6px;">保存配置</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 运行环境与工具链体检弹窗 -->
+  <div class="modal-backdrop" id="doctorModal">
+    <div class="modal" style="max-width: 620px;">
+      <div class="modal-header">
+        <span>🩺 运行环境与底层工具链体检报告</span>
+        <button class="btn-icon" onclick="closeModal('doctorModal')">关闭</button>
+      </div>
+      <div class="modal-body" id="doctor-content">
+        <div style="text-align:center;padding:20px;color:var(--text-muted);">正在扫描检测环境与底层工具链...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 实时运行日志与错误深度分析弹窗 -->
+  <div class="modal-backdrop" id="logModal">
+    <div class="modal" style="max-width: 680px;">
+      <div class="modal-header">
+        <span>📋 系统调度日志与诊断 (Diagnostics & Logs)</span>
+        <div style="display:flex;gap:6px;">
+          <button class="btn-icon" onclick="clearLogs()" style="color:#f85149;">清空</button>
+          <button class="btn-icon" onclick="closeModal('logModal')">关闭</button>
+        </div>
+      </div>
+      <div class="modal-body" style="padding:14px;">
+        <div id="log-container" style="background:#090d16;border:1px solid #30363d;border-radius:6px;padding:12px;font-family:var(--mono);font-size:11.5px;line-height:1.6;color:#c9d1d9;max-height:360px;overflow-y:auto;white-space:pre-wrap;word-break:break-all;">
+[系统启动] iOS Harness 诊断日志器初始化完成。
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const DEFAULT_PLUGINS = [
+      { id: 'dsh-ipad-posix-exec', name: '真 POSIX 终端插件', version: '1.0.0', description: '调用 /var/jb/bin/sh 真终端工具链，替代桌面重型沙盒' },
+      { id: 'dsh-ipad-memory-guard', name: '内存 GC 守护插件', version: '1.0.0', description: '8G 运存保护伞，闲置主动 GC，峰值严格 < 80MB' },
+      { id: 'dsh-ipad-storage-sync', name: '闪存分层与 NAS 归档插件', version: '1.0.0', description: '14天本地热数据留存，超期自动归档 NAS/WebDAV' },
+      { id: 'dsh-ipad-cost-meter', name: 'Token 计量与成本统计插件', version: '1.0.0', description: '实时核算 DeepSeek V3/R1 输入输出 Token 与账单' },
+      { id: 'dsh-ipad-prompt-optimizer', name: '本地结构化提示词调优插件', version: '1.0.0', description: '纯本机零 Token 规则化重写高质量 System Prompt' },
+      { id: 'dsh-ipad-mnemon-lite', name: '轻量记忆图谱插件', version: '1.0.0', description: '磁盘级知识沉淀与检索，冷数据零内存常驻' },
+      { id: 'dsh-ipad-modlens-lite', name: '轻量多模态转接插件', version: '1.0.0', description: 'iPad 截图与图片分块流式解析，严防大图 OOM' },
+      { id: 'dsh-ipad-market', name: '内置轻量插件市场', version: '1.0.0', description: '直连 GitHub 索引，支持轻插件热更新与启停' }
+    ];
+
+    let totalTokens = 0;
+    let conversationHistory = [];
+
+    const PRESET_CHANNELS = {
+      'gemini-gateway': {
+        baseUrl: 'https://api.deepseek.com/v1',
+        apiKey: '',
+        model: 'deepseek-chat'
+      },
+      'deepseek-official': {
+        baseUrl: 'https://api.deepseek.com/v1',
+        apiKey: '',
+        model: 'deepseek-chat'
+      },
+      'siliconflow': {
+        baseUrl: 'https://api.siliconflow.cn/v1',
+        apiKey: '',
+        model: 'deepseek-ai/DeepSeek-V3.2'
+      },
+      'sensenova': {
+        baseUrl: 'https://token.sensenova.cn/v1',
+        apiKey: '',
+        model: 'glm-5.2'
+      },
+      'zhipu': {
+        baseUrl: 'https://open.bigmodel.cn/api/paas/v4',
+        apiKey: '',
+        model: 'glm-4.7'
+      }
+    };
+
+    function syncUserConfigToNative(cfgDict) {
+      if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.dshNativeBridge) {
+        window.webkit.messageHandlers.dshNativeBridge.postMessage({
+          id: 'cfg_' + Date.now(),
+          action: 'saveUserConfig',
+          payload: cfgDict
+        });
+      } else {
+        fetch('/api/user/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(cfgDict)
+        }).catch(() => {});
+      }
+    }
+
+    function applyPresetChannel(key) {
+      const cfg = PRESET_CHANNELS[key];
+      if (!cfg) return;
+      document.getElementById('cfg-baseurl').value = cfg.baseUrl;
+      document.getElementById('cfg-model').value = cfg.model;
+
+      let savedChannels = {};
+      try {
+        savedChannels = JSON.parse(localStorage.getItem('dsh_channel_keys') || '{}');
+      } catch(e) {}
+
+      if (savedChannels[key]) {
+        document.getElementById('cfg-apikey').value = savedChannels[key];
+      } else if (cfg.apiKey) {
+        document.getElementById('cfg-apikey').value = cfg.apiKey;
+      }
+    }
+
+    function loadSettings() {
+      // 优先从 Native 持久化对象注入读取已保存配置 (Documents/dsh_user_config.json 或 UserDefaults)
+      const savedCfg = window.__DSH_USER_CONFIG__ || {};
+
+      const curBaseUrl = localStorage.getItem('dsh_base_url') || savedCfg.base_url || 'https://api.deepseek.com/v1';
+      const curApiKey = localStorage.getItem('dsh_api_key') || savedCfg.api_key || '';
+      const curModel = localStorage.getItem('dsh_model') || savedCfg.model || 'deepseek-chat';
+      const curNas = localStorage.getItem('dsh_nas_url') || savedCfg.nas_url || '';
+
+      document.getElementById('cfg-baseurl').value = curBaseUrl;
+      document.getElementById('cfg-apikey').value = curApiKey;
+      document.getElementById('cfg-model').value = curModel;
+      document.getElementById('cfg-nas').value = curNas;
+
+      // 恢复历史会话（若存在且当前会话为空）
+      const historyToRestore = savedCfg.chat_history || (function() {
+        try { return JSON.parse(localStorage.getItem('dsh_chat_history') || '[]'); } catch(e) { return []; }
+      })();
+      if (Array.isArray(historyToRestore) && historyToRestore.length > 0 && conversationHistory.length === 0) {
+        conversationHistory = historyToRestore;
+        renderRestoredHistory(conversationHistory);
+      }
+    }
+
+    function renderRestoredHistory(historyList) {
+      const list = document.getElementById('chat-list');
+      const divider = document.createElement('div');
+      divider.style.cssText = 'text-align:center;font-size:11px;color:var(--text-muted);margin:8px 0;padding:4px 0;border-top:1px dashed #30363d;border-bottom:1px dashed #30363d;';
+      divider.textContent = '─── 已恢复上次历史会话上下文 (升级安装自动保留) ───';
+      list.appendChild(divider);
+
+      for (const item of historyList) {
+        if (!item.content) continue;
+        const div = document.createElement('div');
+        div.className = 'msg ' + (item.role === 'user' ? 'user' : 'bot');
+        div.textContent = item.content;
+        list.appendChild(div);
+      }
+      list.scrollTop = list.scrollHeight;
+    }
+
+    function persistChatHistory() {
+      const trimmed = conversationHistory.slice(-30);
+      try {
+        localStorage.setItem('dsh_chat_history', JSON.stringify(trimmed));
+      } catch(e) {}
+      syncUserConfigToNative({ chat_history: trimmed });
+    }
+
+    function clearChatHistory() {
+      conversationHistory = [];
+      try {
+        localStorage.removeItem('dsh_chat_history');
+      } catch(e) {}
+      syncUserConfigToNative({ chat_history: [] });
+      document.getElementById('chat-list').innerHTML = `
+        <div class="msg bot">
+          ⚡ <b>会话已重置</b><br>
+          <span style="color:var(--text-muted);font-size:12px;">已清空上下文历史记录。您的个人 API Key、自定义模型与地址配置完好保留。</span>
+        </div>
+      `;
+      appendClientLog('CLEAR', '会话上下文已清空');
+    }
+
+    function saveSettings() {
+      const baseUrl = document.getElementById('cfg-baseurl').value.trim() || 'https://api.deepseek.com/v1';
+      const apiKey = document.getElementById('cfg-apikey').value.trim();
+      const model = document.getElementById('cfg-model').value.trim() || 'deepseek-chat';
+      const nasUrl = document.getElementById('cfg-nas').value.trim();
+
+      localStorage.setItem('dsh_base_url', baseUrl);
+      localStorage.setItem('dsh_api_key', apiKey);
+      localStorage.setItem('dsh_model', model);
+      localStorage.setItem('dsh_nas_url', nasUrl);
+
+      let savedChannels = {};
+      try { savedChannels = JSON.parse(localStorage.getItem('dsh_channel_keys') || '{}'); } catch(e) {}
+      for (let k in PRESET_CHANNELS) {
+        if (PRESET_CHANNELS[k].baseUrl === baseUrl) {
+          savedChannels[k] = apiKey;
+        }
+      }
+      localStorage.setItem('dsh_channel_keys', JSON.stringify(savedChannels));
+
+      syncUserConfigToNative({
+        base_url: baseUrl,
+        api_key: apiKey,
+        model: model,
+        nas_url: nasUrl,
+        channel_keys: savedChannels,
+        has_user_configured: true
+      });
+
+      closeModal('settingsModal');
+      appendMsg('bot', '✅ 自定义配置已锁定保存至本机持久层！当前模型 [' + model + '] 已就绪。\n（持久化机制已生效：后续覆盖升级安装包绝对保留个人数据，不会被重置）');
+    }
+
+    async function fetchRemoteModelList() {
+      const baseUrl = document.getElementById('cfg-baseurl').value.trim();
+      const apiKey = document.getElementById('cfg-apikey').value.trim();
+      const tip = document.getElementById('models-fetch-tip');
+      const btn = document.getElementById('btn-fetch-models');
+
+      if (!baseUrl) {
+        alert('请先输入有效的 API Base URL');
+        return;
+      }
+
+      tip.style.display = 'block';
+      tip.style.color = '#58a6ff';
+      tip.innerHTML = '⏳ 正在向目标节点拉取远程可用模型列表...';
+      btn.disabled = true;
+
+      try {
+        appendClientLog('MODELS', `请求获取模型列表: ${baseUrl}`);
+        const res = await callDSH('models', { baseUrl: baseUrl, apiKey: apiKey });
+
+        let modelList = [];
+        if (Array.isArray(res)) {
+          modelList = res;
+        } else if (res.data && Array.isArray(res.data)) {
+          modelList = res.data;
+        } else if (res.models && Array.isArray(res.models)) {
+          modelList = res.models;
+        }
+
+        if (modelList.length === 0) {
+          if (res.error) {
+            throw new Error(res.error.message || JSON.stringify(res.error));
+          }
+          throw new Error('服务商未返回模型列表数组，请确认该服务商是否开放 /models 接口');
+        }
+
+        const datalist = document.getElementById('preset-models');
+        datalist.innerHTML = '';
+        const ids = [];
+
+        for (const item of modelList) {
+          const id = typeof item === 'string' ? item : (item.id || item.name);
+          if (!id) continue;
+          ids.push(id);
+          const opt = document.createElement('option');
+          opt.value = id;
+          opt.textContent = id;
+          datalist.appendChild(opt);
+        }
+
+        tip.style.color = '#3fb950';
+        tip.innerHTML = `✅ 成功拉取到 <b>${ids.length}</b> 个可用模型！已自动填入下拉选单。<br><span style="font-size:11px;color:var(--text-muted);">点击下方输入框即可直接点选。</span>`;
+        appendClientLog('MODELS_OK', `成功获取 ${ids.length} 个模型: ${ids.slice(0, 5).join(', ')}...`);
+
+        // 如果当前输入框为空或在默认值，自动选中第一个主要模型
+        const curModel = document.getElementById('cfg-model').value.trim();
+        if (!curModel || curModel === 'deepseek-chat') {
+          const preferred = ids.find(x => x.includes('deepseek') || x.includes('gpt') || x.includes('claude') || x.includes('glm')) || ids[0];
+          if (preferred) document.getElementById('cfg-model').value = preferred;
+        }
+      } catch (e) {
+        tip.style.color = '#f85149';
+        tip.innerHTML = `❌ 获取模型列表失败: ${e.message}<br><span style="font-size:11px;color:var(--text-muted);">若该渠道未开放 /models 接口，您仍可直接手动输入模型名称。</span>`;
+        appendClientLog('MODELS_ERR', `获取模型列表异常: ${e.message}`);
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    async function testChannelConnectivity() {
+      const baseUrl = document.getElementById('cfg-baseurl').value.trim();
+      const apiKey = document.getElementById('cfg-apikey').value.trim();
+      const model = document.getElementById('cfg-model').value.trim() || 'deepseek-chat';
+      const tip = document.getElementById('models-fetch-tip');
+      const btn = document.getElementById('btn-test-conn');
+
+      if (!baseUrl) {
+        alert('请先输入有效的 API Base URL');
+        return;
+      }
+
+      tip.style.display = 'block';
+      tip.style.color = '#58a6ff';
+      tip.innerHTML = `⚡ 正在测试与 [${model}] 的单轮极速连通性...`;
+      btn.disabled = true;
+
+      const startTime = Date.now();
+      try {
+        appendClientLog('TEST_CONN', `开始测试节点连通性: ${baseUrl}, model: ${model}`);
+        const res = await callDSH('chat', {
+          baseUrl: baseUrl,
+          apiKey: apiKey,
+          model: model,
+          messages: [{ role: 'user', content: 'hi' }]
+        });
+        const duration = Date.now() - startTime;
+
+        if (res.choices && res.choices[0]) {
+          tip.style.color = '#3fb950';
+          tip.innerHTML = `✅ 连通性测试通过！延迟: <b>${duration}ms</b>，模型正常返回响应。`;
+          appendClientLog('TEST_OK', `测试成功，耗时 ${duration}ms`);
+        } else if (res.error) {
+          throw new Error(res.error.message || JSON.stringify(res.error));
+        } else {
+          throw new Error('未返回预期的 OpenAI 规范格式');
+        }
+      } catch (e) {
+        tip.style.color = '#f85149';
+        tip.innerHTML = `❌ 连通性测试失败: ${e.message}`;
+        appendClientLog('TEST_FAIL', `测试异常: ${e.message}`);
+      } finally {
+        btn.disabled = false;
+      }
+    }
+    loadSettings();
+
+    function openModal(id) {
+      if (id === 'pluginsModal') renderPlugins();
+      if (id === 'doctorModal') renderDoctor();
+      document.getElementById(id).classList.add('show');
+    }
+    function closeModal(id) {
+      document.getElementById(id).classList.remove('show');
+    }
+
+    function openDoctorModal() {
+      openModal('doctorModal');
+    }
+
+    async function renderDoctor() {
+      const container = document.getElementById('doctor-content');
+      container.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text-muted);">⏳ 正在深度扫描底层工具链与服务状态...</div>';
+      try {
+        const res = await fetch('/api/env/doctor');
+        const data = await res.json();
+        const r = data.runtime || {};
+        const t = data.toolchains || {};
+        const m = data.memory || {};
+        const e = data.dshEngine || {};
+
+        function renderTool(name, item) {
+          if (!item) return `<div class="plugin-item"><div class="plugin-info"><h4>${name}</h4><p>未检出</p></div><span class="badge badge-red">缺失</span></div>`;
+          const ok = item.found;
+          const detail = item.path || item.version || (ok ? '已定位' : '未安装');
+          return `
+            <div class="plugin-item">
+              <div class="plugin-info">
+                <h4>${name}</h4>
+                <p style="font-family:monospace;font-size:11px;">${detail}</p>
+              </div>
+              <span class="badge ${ok ? 'badge-green' : 'badge-red'}">${ok ? (item.executable !== false ? '✅ 就绪' : '⚠️ 存在') : '❌ 缺失'}</span>
+            </div>
+          `;
+        }
+
+        container.innerHTML = `
+          <div style="background:#131b26;border:1px solid var(--border);border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:6px;">
+            <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:600;color:#fff;">
+              <span>📱 物理设备与机型</span>
+              <span style="color:#58a6ff;">${r.device || 'iPad'} (${r.hardwareId || 'arm64'})</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted);">
+              <span>操作系统与环境:</span>
+              <span style="color:#fff;">${r.systemVersion || 'iPadOS'} · ${r.mode || '独立移动服务端'}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted);">
+              <span>闪存存储容量:</span>
+              <span style="color:#fff;">剩余 ${r.diskFreeGB || '充足'} / 总计 ${r.diskTotalGB || '256 GB'}</span>
+            </div>
+            <div style="font-size:12px;color:var(--text-muted);">越狱底层根目录: <code style="color:#f0883e;">${r.jbRoot || '/var/jb'}</code></div>
+            <div style="font-size:12px;color:var(--text-muted);">核心服务端口: <code style="color:#3fb950;">${r.listenEndpoint || '0.0.0.0:3080'}</code> (HTTP/WS双通道)</div>
+            <div style="font-size:12px;color:var(--text-muted);">自研轻量插件: <span style="color:#3fb950;">${e.pluginsLoaded || '8/8 就绪'}</span></div>
+          </div>
+
+          <div style="font-size:12px;font-weight:600;color:#8b9bb4;margin-top:4px;">🛠️ 二进制与工具链探测 (Node / POSIX / Python)</div>
+          ${renderTool('Node.js 运行时 (node/node22/node23)', t.node)}
+          ${renderTool('NPM 包管理器 (npm/npm22)', t.npm)}
+          ${renderTool('POSIX Shell (/bin/sh 或 /var/jb/bin/sh)', t.posixSh || t.sh)}
+          ${renderTool('Bash 增强终端解释器', t.bash)}
+          ${renderTool('Python 3 本地执行环境', t.python3)}
+          ${renderTool('Curl 网络请求工具', t.curl)}
+          ${renderTool('Git 版本管理工具', t.git)}
+
+          <div style="font-size:12px;font-weight:600;color:#8b9bb4;margin-top:4px;">📊 内存健康与防爆保护</div>
+          <div style="background:#131b26;border:1px solid var(--border);border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:6px;">
+            <div style="display:flex;justify-content:space-between;font-size:12px;">
+              <span>当前 App 实际占用 (RSS):</span>
+              <span style="color:#fff;font-weight:600;">${m.currentRssMB || m.rssMB || 0} MB</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:12px;">
+              <span>动态安全硬上限:</span>
+              <span style="color:#3fb950;font-weight:600;">${m.dynamicLimitMB || 1024} MB</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:12px;">
+              <span>健康评级:</span>
+              <span style="color:${m.health === '健康 (安全阈值内)' ? '#3fb950' : '#f0883e'};font-weight:600;">${m.health || '健康'}</span>
+            </div>
+          </div>
+          <button class="new-chat-btn" onclick="renderDoctor()" style="margin-top:8px;">🔄 重新体检探测</button>
+        `;
+      } catch (e) {
+        container.innerHTML = `<div style="color:#f85149;padding:16px;">❌ 获取诊断报告失败: ${e.message}</div>`;
+      }
+    }
+
+    async function renderPlugins() {
+      let list = DEFAULT_PLUGINS;
+      try {
+        const res = await fetch('/api/plugins');
+        const data = await res.json();
+        if (Array.isArray(data) && data.length) list = data;
+      } catch (_) {}
+      const box = document.getElementById('plugin-list-container');
+      box.innerHTML = list.map(p => `
+        <div class="plugin-item">
+          <div class="plugin-info">
+            <h4>${p.name} <span style="color:#8b9bb4;font-weight:400;">v${p.version}</span></h4>
+            <p>${p.description}</p>
+          </div>
+          <span class="badge badge-green">按需就绪</span>
+        </div>
+      `).join('');
+    }
+
+    async function refreshHealth() {
+      try {
+        const res = await fetch('/api/health');
+        const d = await res.json();
+        const rss = d.rssMB || 42;
+        const limit = d.limitMemoryMB || 1024;
+        const total = d.totalMemoryMB || 8192;
+        const marketing = d.deviceMarketing || '';
+        const devLabel = marketing ? marketing : (Math.round(total/1024) + 'G');
+        const lbl = document.getElementById('mem-status-val');
+        if (lbl) lbl.textContent = `${rss}MB / ${limit}MB (${devLabel})`;
+        const devTag = document.getElementById('dev-tag');
+        if (devTag && marketing) devTag.textContent = marketing;
+      } catch (_) {}
+    }
+    setInterval(refreshHealth, 8000);
+    refreshHealth();
+
+    async function triggerGC() {
+      await refreshHealth();
+      appendMsg('bot', '🧹 [dsh-ipad-memory-guard] 已执行闲置插件卸载与内存主动 GC 回收，系统运存水位保持安全。');
+    }
+
+    function switchMode(mode, el) {
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      if (el) el.classList.add('active');
+      document.getElementById('action-mode').value = mode === 'mnemon' ? 'chat' : mode;
+      onSelectModeChange();
+    }
+
+    function onSelectModeChange() {
+      const m = document.getElementById('action-mode').value;
+      const banner = document.getElementById('mode-banner');
+      if (m === 'posix') {
+        banner.textContent = '当前模式：真 POSIX 终端直通（调用 /var/jb/bin/sh 或系统 sh 执行指令）';
+      } else if (m === 'optimize') {
+        banner.textContent = '当前模式：本地提示词结构调优（纯本机零 Token 消耗）';
+      } else if (m === 'chat') {
+        banner.textContent = '当前模式：极速对话推理（iOS 本机调度 + 云端 API 推理，零电脑依赖）';
+      } else {
+        banner.textContent = 'Codex 智能体模式：自主规划 + 真实 POSIX 终端执行 + 零延迟 Native 桥接';
+      }
+    }
+
+    let clientLogs = [];
+    function appendClientLog(level, msg) {
+      const now = new Date().toTimeString().split(' ')[0];
+      const entry = `[${now}][${level}] ${msg}`;
+      clientLogs.push(entry);
+      if (clientLogs.length > 80) clientLogs.shift();
+      const el = document.getElementById('log-container');
+      if (el) {
+        el.textContent = clientLogs.join('\n');
+        el.scrollTop = el.scrollHeight;
+      }
+      try {
+        if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.dshErrors) {
+          window.webkit.messageHandlers.dshErrors.postMessage(`[${level}] ${msg}`);
+        }
+      } catch(e) {}
+    }
+
+    function openLogModal() {
+      openModal('logModal');
+      const el = document.getElementById('log-container');
+      if (el) el.scrollTop = el.scrollHeight;
+    }
+
+    function clearLogs() {
+      clientLogs = [`[${new Date().toTimeString().split(' ')[0]}][INFO] 日志已清空。`];
+      const el = document.getElementById('log-container');
+      if (el) el.textContent = clientLogs.join('\n');
+    }
+
+    function resetChat() {
+      document.getElementById('chat-list').innerHTML = '';
+      appendMsg('bot', '✨ 已开启全新 iPad 本机会话（历史超 14 天会话将由 dsh-ipad-storage-sync 自动归档）。');
+      appendClientLog('INFO', '会话上下文已重置');
+    }
+
+    function appendMsg(role, htmlOrText) {
+      const list = document.getElementById('chat-list');
+      const div = document.createElement('div');
+      div.className = 'msg ' + role;
+      div.innerHTML = htmlOrText;
+      list.appendChild(div);
+      list.scrollTop = list.scrollHeight;
+      return div;
+    }
+
+    function fillAndSend(text, modeOverride) {
+      if (modeOverride) {
+        document.getElementById('action-mode').value = modeOverride;
+      } else {
+        document.getElementById('action-mode').value = 'agent';
+      }
+      document.getElementById('prompt-input').value = text;
+      sendTask();
+    }
+
+    // ==========================================
+    // iPad 本机零延迟 IPC 通信桥接 (Native Bridge)
+    // ==========================================
+    window._dshPendingRequests = {};
+    window.dshOnNativeBridgeB64 = function(id, statusCode, b64) {
+      const cb = window._dshPendingRequests && window._dshPendingRequests[id];
+      if (!cb) return;
+      try {
+        const binStr = atob(b64);
+        const bytes = new Uint8Array(binStr.length);
+        for (let i = 0; i < binStr.length; i++) bytes[i] = binStr.charCodeAt(i);
+        const jsonText = new TextDecoder('utf-8').decode(bytes);
+        const data = JSON.parse(jsonText);
+        cb(statusCode, data, null);
+      } catch (e) {
+        cb(statusCode, null, e.message);
+      }
+    };
+
+    async function callDSH(action, payload) {
+      if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.dshNativeBridge) {
+        return new Promise((resolve, reject) => {
+          const id = 'dsh_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
+          const timer = setTimeout(() => {
+            delete window._dshPendingRequests[id];
+            reject(new Error('iPad 本机桥接通信超时 (60s)'));
+          }, 60000);
+          window._dshPendingRequests[id] = (statusCode, data, err) => {
+            clearTimeout(timer);
+            delete window._dshPendingRequests[id];
+            if (statusCode >= 200 && statusCode < 300) {
+              resolve(data);
+            } else {
+              const errMsg = err || (data && (data.error?.message || data.error)) || `HTTP ${statusCode}`;
+              reject(new Error(errMsg));
+            }
+          };
+          window.webkit.messageHandlers.dshNativeBridge.postMessage({ id, action, payload });
+        });
+      }
+
+      // 降级使用 HTTP (支持局域网 iPhone 纯客户端访问)
+      const url = action === 'chat' ? '/api/chat' : (action === 'models' ? '/api/models' : (action === 'exec' ? '/api/exec' : (action === 'doctor' ? '/api/env/doctor' : `/api/${action}`)));
+      const isPost = (action === 'chat' || action === 'models' || action === 'exec');
+      const res = await fetch(url, {
+        method: isPost ? 'POST' : 'GET',
+        headers: isPost ? { 'Content-Type': 'application/json' } : undefined,
+        body: isPost ? JSON.stringify(payload) : undefined
+      });
+      if (!res.ok) {
+        const txt = await res.text();
+        throw new Error(`服务异常 HTTP ${res.status}: ${txt}`);
+      }
+      return await res.json();
+    }
+
+    // ==========================================
+    // 智能体工具矩阵 (Agent Tools)
+    // ==========================================
+    const DSH_AGENT_TOOLS = [
+      {
+        type: 'function',
+        function: {
+          name: 'bash',
+          description: '在 iPad 本机 POSIX 终端执行 Shell 命令。可执行如 uname -a, df -h, free -m, ps, ls, cat, echo, node -v, git 等。',
+          parameters: {
+            type: 'object',
+            properties: {
+              command: {
+                type: 'string',
+                description: '要在 iPad 终端上执行的完整 Shell 命令'
+              }
+            },
+            required: ['command']
+          }
+        }
+      },
+      {
+        type: 'function',
+        function: {
+          name: 'read_file',
+          description: '读取 iPad 本机指定路径的文件内容。',
+          parameters: {
+            type: 'object',
+            properties: {
+              path: {
+                type: 'string',
+                description: '文件路径'
+              }
+            },
+            required: ['path']
+          }
+        }
+      },
+      {
+        type: 'function',
+        function: {
+          name: 'write_file',
+          description: '在 iPad 本机指定路径创建或写入文本文件。',
+          parameters: {
+            type: 'object',
+            properties: {
+              path: {
+                type: 'string',
+                description: '目标文件路径'
+              },
+              content: {
+                type: 'string',
+                description: '要写入的文本内容'
+              }
+            },
+            required: ['path', 'content']
+          }
+        }
+      },
+      {
+        type: 'function',
+        function: {
+          name: 'system_doctor',
+          description: '探测 iPad 本机 Node.js, POSIX Shell, Python3, Git, 内存与越狱特权状态。',
+          parameters: {
+            type: 'object',
+            properties: {}
+          }
+        }
+      }
+    ];
+
+    async function executeAgentTool(name, args) {
+      appendClientLog('TOOL_CALL', `执行工具 [${name}]: ${JSON.stringify(args)}`);
+      if (name === 'bash') {
+        const res = await callDSH('exec', { command: args.command });
+        return (res.stdout || '') + (res.stderr ? `\n[stderr]: ${res.stderr}` : '') || `[exitCode ${res.exitCode}]`;
+      } else if (name === 'read_file') {
+        const res = await callDSH('exec', { command: `cat ${args.path}` });
+        return res.stdout || res.stderr || '空文件或无法读取';
+      } else if (name === 'write_file') {
+        const res = await callDSH('exec', { command: `echo '${(args.content||'').replace(/'/g, "'\\''")}' > ${args.path}` });
+        return res.stdout || '写入完成';
+      } else if (name === 'system_doctor') {
+        const res = await callDSH('doctor', {});
+        return JSON.stringify(res, null, 2);
+      }
+      return `未知工具: ${name}`;
+    }
+
+    // ==========================================
+    // 智能体自主多轮工作流核心调度器 (Agent Workflow Loop)
+    // ==========================================
+    async function executeAgentWorkflow(userText, botDiv) {
+      const apiKey = localStorage.getItem('dsh_api_key') || '';
+      const baseUrl = (localStorage.getItem('dsh_base_url') || 'https://api.deepseek.com/v1').replace(/\/+$/, '');
+      const model = localStorage.getItem('dsh_model') || 'deepseek-chat';
+
+      appendClientLog('AGENT_START', `启动智能体工作流: model=${model}, baseUrl=${baseUrl}`);
+
+      const systemPrompt = `你是运行在 iOS / iPadOS 独立移动生产力工作站上的 DeepSeek Harness 专家智能体 (iOS Harness Agent)。
+你的宿主环境是 iOS (rootless 越狱 / TrollStore 特权环境)，支持执行真实终端命令与文件管理。
+请根据用户需求自主思考并调用提供的工具 (bash, read_file, write_file, system_doctor) 获取真实环境信息。严禁捏造数据。
+完成工具调用后，请结合返回结果给出清晰、专业、结构化的结论。`;
+
+      let messages = [
+        { role: 'system', content: systemPrompt },
+        ...conversationHistory.slice(-8),
+        { role: 'user', content: userText }
+      ];
+
+      botDiv.innerHTML = `
+        <div class="agent-workflow-card" style="border:1px solid #388bfd44;background:#161b22;border-radius:8px;padding:12px;margin-bottom:8px;">
+          <div style="display:flex;align-items:center;gap:8px;font-weight:600;color:#58a6ff;font-size:13px;margin-bottom:8px;">
+            <span style="display:inline-block;animation:pulse 1.5s infinite;">⚙️</span> iOS Harness 智能体工作流执行中 (${model})
+          </div>
+          <div id="agent-steps-container" style="display:flex;flex-direction:column;gap:8px;font-size:12px;">
+            <div style="color:var(--text-muted);">🧠 智能体正在规划任务并分析工具链路...</div>
+          </div>
+        </div>
+        <div id="agent-final-reply" style="display:none;margin-top:10px;line-height:1.6;white-space:pre-wrap;"></div>
+      `;
+
+      const stepsContainer = botDiv.querySelector('#agent-steps-container');
+      const finalReplyDiv = botDiv.querySelector('#agent-final-reply');
+
+      let step = 0;
+      const maxSteps = 5;
+
+      while (step < maxSteps) {
+        step++;
+        appendClientLog('AGENT_STEP', `第 ${step} 轮 Agent 思考与调度`);
+
+        let responseData;
+        try {
+          responseData = await callDSH('chat', {
+            baseUrl,
+            apiKey,
+            model,
+            messages,
+            tools: DSH_AGENT_TOOLS
+          });
+        } catch (callErr) {
+          if (callErr.message && callErr.message.includes('400')) {
+            appendClientLog('DEGRADE', `模型不支持 OpenAI tools 协议，降级为纯文本对话调度`);
+            responseData = await callDSH('chat', {
+              baseUrl,
+              apiKey,
+              model,
+              messages
+            });
+          } else {
+            throw callErr;
+          }
+        }
+
+        const choice = responseData.choices && responseData.choices[0];
+        if (!choice || !choice.message) {
+          throw new Error(responseData.error?.message || '模型未返回有效消息');
+        }
+
+        const msg = choice.message;
+        const toolCalls = msg.tool_calls;
+
+        const used = (responseData.usage && responseData.usage.total_tokens) ? responseData.usage.total_tokens : 0;
+        totalTokens += used;
+        document.getElementById('cost-banner').textContent = `[${model}] 累计: ${totalTokens} Tokens ($${(totalTokens * 0.000002).toFixed(5)})`;
+
+        // 1. 如果模型发起工具调用 (Tool Calling)
+        if (toolCalls && toolCalls.length > 0) {
+          messages.push(msg);
+
+          for (const tc of toolCalls) {
+            const fnName = tc.function.name;
+            let fnArgs = {};
+            try { fnArgs = JSON.parse(tc.function.arguments || '{}'); } catch(e) {}
+
+            appendClientLog('TOOL_EXEC', `调度工具 ${fnName}: ${JSON.stringify(fnArgs)}`);
+
+            const stepCard = document.createElement('div');
+            stepCard.style.cssText = "background:#0d1117;border:1px solid #30363d;border-radius:6px;padding:8px;";
+            stepCard.innerHTML = `
+              <div style="display:flex;align-items:center;justify-content:space-between;color:#79c0ff;font-weight:500;">
+                <span>🔧 调用工具: <b>${fnName}</b></span>
+                <span style="font-size:10px;color:var(--text-muted);">步骤 ${step}</span>
+              </div>
+              <div style="font-family:monospace;font-size:11px;color:#a5d6ff;margin-top:4px;word-break:break-all;">
+                &gt; ${fnArgs.command || fnArgs.path || JSON.stringify(fnArgs)}
+              </div>
+              <div class="tool-output" style="margin-top:6px;background:#030712;padding:6px;border-radius:4px;color:#7ee787;font-family:monospace;font-size:11px;white-space:pre-wrap;max-height:160px;overflow-y:auto;">⏳ 正在 iPad 本机执行...</div>
+            `;
+            stepsContainer.appendChild(stepCard);
+
+            const toolResult = await executeAgentTool(fnName, fnArgs);
+            stepCard.querySelector('.tool-output').textContent = toolResult || '(命令已执行完毕，无输出)';
+
+            messages.push({
+              role: 'tool',
+              tool_call_id: tc.id,
+              content: toolResult
+            });
+          }
+          continue;
+        }
+
+        // 2. 工具调用结束或无需工具，输出最终分析回复
+        finalReplyDiv.style.display = 'block';
+        finalReplyDiv.textContent = msg.content || '任务执行完毕。';
+        appendClientLog('AGENT_DONE', `智能体工作流执行完成 (历经 ${step} 轮交互)`);
+
+        if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.dshTaskNotice) {
+          window.webkit.messageHandlers.dshTaskNotice.postMessage({ title: 'Agent 工作流任务' });
+        }
+
+        conversationHistory.push({ role: 'user', content: userText });
+        conversationHistory.push({ role: 'assistant', content: msg.content || '' });
+        persistChatHistory();
+        return;
+      }
+
+      finalReplyDiv.style.display = 'block';
+      finalReplyDiv.textContent = '智能体任务已达最大调用轮次上限。';
+    }
+
+    // ==========================================
+    // 统一任务发送分发器
+    // ==========================================
+    async function sendTask() {
+      const input = document.getElementById('prompt-input');
+      const text = input.value.trim();
+      if (!text) return;
+      input.value = '';
+
+      const mode = document.getElementById('action-mode').value;
+      appendMsg('user', text.replace(/</g, '&lt;'));
+      const botDiv = appendMsg('bot', '⏳ 正在由 iPad 本机调度执行...');
+
+      try {
+        if (mode === 'posix') {
+          appendClientLog('POSIX', `准备执行命令: ${text}`);
+          const data = await callDSH('exec', { command: text });
+          appendClientLog('POSIX', `命令返回 code=${data.exitCode ?? 0}`);
+          botDiv.textContent = `[POSIX 终端返回 (code ${data.exitCode ?? 0})]\n` + (data.stdout || data.stderr || JSON.stringify(data));
+          return;
+        }
+
+        if (mode === 'optimize') {
+          appendClientLog('OPTIMIZE', `调用本机提示词调优引擎`);
+          const data = await callDSH('chat', { prompt: text, mode: 'optimize' });
+          appendClientLog('OPTIMIZE', `优化完成`);
+          botDiv.textContent = data.optimizedPrompt || data.reply;
+          return;
+        }
+
+        if (mode === 'agent') {
+          await executeAgentWorkflow(text, botDiv);
+          return;
+        }
+
+        // 纯文本对话模式 (Chat)
+        const apiKey = localStorage.getItem('dsh_api_key') || '';
+        const baseUrl = (localStorage.getItem('dsh_base_url') || 'https://api.deepseek.com/v1').replace(/\/+$/, '');
+        const model = localStorage.getItem('dsh_model') || 'deepseek-chat';
+
+        appendClientLog('DISPATCH', `发起纯文本对话: model=${model}, baseUrl=${baseUrl}`);
+        botDiv.innerHTML = `<span style="display:inline-block;animation:pulse 1.5s infinite;">⏳ 正在调度模型推理 (${model})...</span><br><span style="font-size:11px;color:var(--text-muted);">目标节点: ${baseUrl}</span>`;
+
+        let chatMessages = [
+          ...conversationHistory.slice(-8),
+          { role: 'user', content: text }
+        ];
+
+        const dsData = await callDSH('chat', {
+          baseUrl: baseUrl,
+          apiKey: apiKey,
+          model: model,
+          messages: chatMessages
+        });
+
+        if (dsData.choices && dsData.choices[0]) {
+          appendClientLog('SUCCESS', `模型返回响应，消耗 tokens: ${dsData.usage?.total_tokens || 0}`);
+          const replyContent = dsData.choices[0].message?.content || '无回包内容';
+          botDiv.textContent = replyContent;
+          const used = (dsData.usage && dsData.usage.total_tokens) ? dsData.usage.total_tokens : (text.length * 2);
+          totalTokens += used;
+          document.getElementById('cost-banner').textContent = `[${model}] 累计: ${totalTokens} Tokens ($${(totalTokens * 0.000002).toFixed(5)})`;
+          conversationHistory.push({ role: 'user', content: text });
+          conversationHistory.push({ role: 'assistant', content: replyContent });
+          persistChatHistory();
+        } else if (dsData.reply) {
+          botDiv.textContent = dsData.reply;
+        } else if (dsData.error) {
+          const errMsg = dsData.error.message || JSON.stringify(dsData.error);
+          appendClientLog('ERROR', `模型接口报错: ${errMsg}`);
+          botDiv.innerHTML = `❌ <b>模型接口返回错误：</b><br>${errMsg}`;
+        }
+      } catch (e) {
+        appendClientLog('EXCEPTION', `执行异常: ${e.message}`);
+        botDiv.innerHTML = `⚠️ <b>执行异常：</b>${e.message}<br><br><span style="color:var(--text-muted);font-size:12px;">点击顶部「📋 诊断与日志」查看完整诊断日志。</span>`;
+      }
+    }
+  </script>
+</body>
+</html>

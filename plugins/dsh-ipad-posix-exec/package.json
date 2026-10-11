@@ -1,0 +1,7 @@
+{
+  "name": "dsh-ipad-posix-exec",
+  "version": "1.0.0",
+  "description": "Rootless POSIX shell execution plugin for DSH on iPadOS",
+  "main": "index.js",
+  "license": "MIT"
+}

@@ -1,0 +1,10 @@
+{
+  "name": "pad-harness-core",
+  "version": "1.0.0",
+  "description": "Standalone DSH Core Engine running directly on iPadOS Rootless",
+  "main": "index.js",
+  "scripts": {
+    "start": "node --expose-gc --max-old-space-size=1024 index.js"
+  },
+  "license": "MIT"
+}
