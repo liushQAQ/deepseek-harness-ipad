@@ -2582,18 +2582,22 @@ final class ViewController: UIViewController {
         return AppDelegate.getHardwareDeviceInfo().marketing
     }
 
-    /// 原生设备运行环境信息检测（精准识别具体机型如 iPhone XR、12 Pro Max 等）
+    /// 原生设备运行环境信息检测（精准识别当前机型型号、系统版本、分辨率及存储容量）
     private static func getDeviceInfoSummary() -> String {
         let marketingModel = getMarketingDeviceModel()
         let hardwareId = getHardwareModelIdentifier()
         let device = UIDevice.current
         let systemVersion = device.systemVersion
-        let name = device.name
         
         var freeDiskGB = "未知"
-        if let attrs = try? FileManager.default.attributesOfFileSystem(forPath: NSHomeDirectory()),
-           let freeSize = attrs[.systemFreeSize] as? Int64 {
-            freeDiskGB = String(format: "%.1f GB", Double(freeSize) / 1024.0 / 1024.0 / 1024.0)
+        var totalDiskGB = "未知"
+        if let attrs = try? FileManager.default.attributesOfFileSystem(forPath: NSHomeDirectory()) {
+            if let freeSize = attrs[.systemFreeSize] as? Int64 {
+                freeDiskGB = String(format: "%.1f GB", Double(freeSize) / 1024.0 / 1024.0 / 1024.0)
+            }
+            if let totalSize = attrs[.systemSize] as? Int64 {
+                totalDiskGB = String(format: "%.1f GB", Double(totalSize) / 1024.0 / 1024.0 / 1024.0)
+            }
         }
         
         let screen = UIScreen.main
@@ -2601,7 +2605,7 @@ final class ViewController: UIViewController {
         let scale = screen.scale
         let res = "\(Int(bounds.width * scale))×\(Int(bounds.height * scale)) (@\(Int(scale))x)"
         
-        return "设备: \(marketingModel) [\(hardwareId)] (\(name))\n系统: iOS \(systemVersion)\n屏幕: \(res)\n可用存储: \(freeDiskGB)"
+        return "机型型号: \(marketingModel) (\(hardwareId))\n系统版本: iOS \(systemVersion)\n屏幕规格: \(res)\n存储容量: 剩余 \(freeDiskGB) / 总计 \(totalDiskGB)"
     }
 
     /// 关于：版本号原生可见（读 Info.plist，回退到编译期常量）
@@ -2614,19 +2618,19 @@ final class ViewController: UIViewController {
             title: "iOS Harness",
             message: """
             版本：\(version) (\(build))
-            定位：iOS / iPadOS 独立移动生产力工作站 (0.0.0.0:3080)
-            界面风格：Codex 极简设计
-            开源仓库：
+            作者：liush734530963
+            主号开源仓库：
             https://github.com/liush734530963/deepseek-harness-ipad
 
-            【设备检测信息】
+            【本机设备属性检测】
             \(deviceInfo)
 
             【核心特性】
-            1. iOS / iPad 本机全闭环运行 Node.js + DSH 调度内核，零电脑依赖
-            2. 绑定 0.0.0.0:3080，支持作为移动服务器供局域网设备接入
+            1. iOS / iPadOS 独立移动生产力工作站 (0.0.0.0:3080)
+            2. 本机全闭环运行 Node.js + DSH 调度内核，零电脑依赖
             3. 内置 8 大轻量自研插件矩阵，彻底对齐生产力
-            4. 解除 iPhone 设备限制，支持 A15/A16/A17/M 系列全系移动设备
+            4. Codex 极简交互设计，多轮智能体自主规划执行
+            5. 沙盒物理文件 + UserDefaults 双轨持久化，升级防覆盖
             """,
             preferredStyle: .alert)
         alert.addAction(UIAlertAction(title: "好", style: .cancel))
