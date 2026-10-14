@@ -10,10 +10,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     /// 这里只是 Info.plist 读取失败时的兜底常量，需与 VERSION 文件保持一致。
     enum Version {
         /// 展示版本（CFBundleShortVersionString）
-        static let marketing = "1.0.79"
+        static let marketing = "1.0.80"
         /// 构建号（CFBundleVersion）
-        static let build = "11"
-        /// 组合展示，如 v1.0.79 (11)
+        static let build = "12"
+        /// 组合展示，如 v1.0.80 (12)
         static var display: String { "v\(marketing) (\(build))" }
     }
 
