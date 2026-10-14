@@ -1,9 +1,9 @@
 {
   "version": "1.0.80",
-  "build": 12,
+  "build": 2,
   "title": "v1.0.80 架构彻底合并为单一公开版·全网标配检测更新与升级·彻底根治巨魔301报错",
   "changelog": "1. 架构彻底合并：彻底废除个人版与个人版链接，全网统一单一公开版 TIPA，持久化沙盒数据 100% 自动继承零丢失；\n2. 彻底根治巨魔 (TrollStore) 更新报错 301：新增 App 内免代理极速下载通道 + 本地安全直调巨魔秒级安装，100% 消除网络重定向异常；\n3. 全员标配检测更新：控制中心悬浮菜单与关于界面新增「🚀 检查更新 (巨魔免代理直装)」，支持国内多镜像自动测速容灾。",
-  "tipa_url": "https://github.com/liushQAQ/deepseek-harness-ipad/releases/download/v1.0.80/PadHarness-public-unsigned.tipa",
-  "public_tipa_url": "https://github.com/liushQAQ/deepseek-harness-ipad/releases/download/v1.0.80/PadHarness-public-unsigned.tipa",
+  "tipa_url": "https://github.com/liushQAQ/deepseek-harness-ipad/releases/download/v1.0.80/PadHarness-public-1.0.80-2.tipa",
+  "public_tipa_url": "https://github.com/liushQAQ/deepseek-harness-ipad/releases/download/v1.0.80/PadHarness-public-1.0.80-2.tipa",
   "release_url": "https://github.com/liushQAQ/deepseek-harness-ipad/releases/tag/v1.0.80"
 }
