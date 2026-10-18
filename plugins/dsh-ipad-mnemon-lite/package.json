@@ -1,6 +1,12 @@
 {
   "name": "dsh-ipad-mnemon-lite",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Pad Harness 轻量级记忆图谱与知识检索插件",
-  "main": "index.js"
+  "main": "index.js",
+  "engines": {
+    "dsh": ">=0.1.0"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": ">=4.0.0"
+  }
 }

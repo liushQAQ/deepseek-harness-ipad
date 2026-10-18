@@ -1,6 +1,12 @@
 {
   "name": "dsh-ipad-cost-meter",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Pad Harness 轻量化 Token 计费统计插件",
-  "main": "index.js"
+  "main": "index.js",
+  "engines": {
+    "dsh": ">=0.1.0"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": ">=4.0.0"
+  }
 }

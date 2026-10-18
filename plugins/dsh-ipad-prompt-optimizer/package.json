@@ -1,6 +1,12 @@
 {
   "name": "dsh-ipad-prompt-optimizer",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Pad Harness 纯本地结构化提示词调优引擎",
-  "main": "index.js"
+  "main": "index.js",
+  "engines": {
+    "dsh": ">=0.1.0"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": ">=4.0.0"
+  }
 }
